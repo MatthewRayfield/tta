@@ -1,6 +1,6 @@
 window.onload = function () {
     var context = new webkitAudioContext();
-    var oscillators = {};
+    var instrument = new Instrument(context);
 
     document.onkeydown = function (e) {
         var key = e.which;
@@ -14,77 +14,99 @@ window.onload = function () {
             77: 493.88
         };
         var freq = freqs[key];
-        var ocscillator;
 
         if (freq) {
-            oscillator = oscillators[key];
-            if (oscillator) {
-                oscillator.disconnect();
+            if (!instrument.playing) {
+                instrument.play(freq);
             }
-            oscillator = oscillators[key] = new Oscillator(context);
-            oscillator.freq = freq;
-            oscillator.play();
         }
 
         console.log(key);
     };
 
     document.onkeyup = function (e) {
-        var key = e.which;
-        var oscillator = oscillators[key];
-
-        if (oscillator) {
-            oscillator.release();
-        }
+        instrument.stop();
     };
 
-    function Oscillator(context) {
+    function Instrument(context) {
         var self = this;
-        var x = 0;
-        var node = context.createJavaScriptNode(1024, 1, 1);
-        var gainNode = context.createGainNode();
-        var sampleRate = context.sampleRate;
+        var t = 0;
+        var audioNode;
+        var gainNode;
+        var startTime;
 
-        self.freq = 440;
+        // Properties
+        self.volume = 1;
+        self.type = 0;
+        self.playing = false;
 
-        node.onaudioprocess = process;
+        // Volume envelope
+        self.attack = .1;
+        self.decay = .2;
+        self.sustain = .1;
+        self.release = .5;
 
-        function process(e) {
-            var data = e.outputBuffer.getChannelData(0);
-            var i;
-            var l = data.length;
-            var out;
-
-            for (i = 0; i < l; i ++) {
-                out = Math.floor(x / (sampleRate / self.freq)) % 2;
-                //out = Math.sin(x / (sampleRate / (self.freq * 2 * Math.PI)));
-                data[i] = out;
-                x++;
-            }
-        }
-
-        this.play = function () {
-            node.connect(gainNode);
+        self.play = function (frequency) {
+            gainNode = context.createGainNode();
+            startTime = context.currentTime;
+            gainNode.gain.linearRampToValueAtTime(0, context.currentTime);
+            gainNode.gain.linearRampToValueAtTime(self.volume, context.currentTime + self.attack);
+            gainNode.gain.linearRampToValueAtTime(self.sustain, context.currentTime + self.attack + self.decay);
             gainNode.connect(context.destination);
 
+            if (!self.type) {
+                audioNode = context.createJavaScriptNode(1024, 1, 1);
+                audioNode.onaudioprocess = function(e) {
+                    var data = e.outputBuffer.getChannelData(0);
+                    var i;
+                    var l = data.length;
+
+                    for (i = 0; i < l; i ++) {
+                        data[i] = Math.random();
+                    }
+                };
+            }
+            else {
+                audioNode = context.createOscillator();
+                audioNode.type = self.type - 1;
+                audioNode.frequency.value = frequency;
+            }
+            audioNode.connect(gainNode);
+            self.playing = true;
         };
 
-        this.release = function () {
-            function reduceVolume() {
-                gainNode.gain.value -= .01;
-                if (gainNode.gain.value <= 0) {
-                    self.disconnect();
+        self.stop = function () {
+            var releaseTime;
+            var playTime = context.currentTime - startTime;
+            var adTime = self.attack + self.decay;
+            var diff = adTime - playTime;
+
+            if (gainNode) {
+                if (diff > 0) {
+                    releaseTime = self.release + diff;
                 }
                 else {
-                    setTimeout(reduceVolume, 5);
+                    releaseTime = self.release;
                 }
+                gainNode.gain.linearRampToValueAtTime(0, context.currentTime + releaseTime);
             }
-            reduceVolume();
-        };
-
-        this.disconnect = function () {
-            node.disconnect();
-            gainNode.disconnect();
+            self.playing = false;
         };
     }
+
+    document.getElementById('type').onchange = function () {
+        instrument.type = parseFloat(this.value);
+    };
+    document.getElementById('attack').onchange = function () {
+        instrument.attack = parseFloat(this.value);
+    };
+    document.getElementById('decay').onchange = function () {
+        instrument.decay = parseFloat(this.value);
+    };
+    document.getElementById('sustain').onchange = function () {
+        instrument.sustain = parseFloat(this.value);
+    };
+    document.getElementById('release').onchange = function () {
+        instrument.release = parseFloat(this.value);
+    };
 };
