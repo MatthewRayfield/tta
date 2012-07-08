@@ -1,27 +1,34 @@
 window.onload = function () {
     var context = new webkitAudioContext();
     var instrument = new Instrument(context);
+    var stepsByKey = {
+        90: -9,
+        83: -8,
+        88: -7,
+        68: -6,
+        67: -5,
+        86: -4,
+        71: -3,
+        66: -2,
+        72: -1,
+        78: 0,
+        74: 1,
+        77: 2
+    };
+    var octave = 4;
 
     document.onkeydown = function (e) {
         var key = e.which;
-        var freqs = {
-            90: 261.63,
-            88: 293.66,
-            67: 329.63,
-            86: 349.23,
-            66: 392.00,
-            78: 440.00,
-            77: 493.88
-        };
-        var freq = freqs[key];
+        var steps = stepsByKey[key];
+        var freq;
 
-        if (freq) {
+        if (typeof steps !== 'undefined') {
+            steps = steps + ((octave-4)*12)
+            freq = Math.pow(2, steps/12)*440;
             if (!instrument.playing) {
                 instrument.play(freq);
             }
         }
-
-        console.log(key);
     };
 
     document.onkeyup = function (e) {
@@ -108,5 +115,8 @@ window.onload = function () {
     };
     document.getElementById('release').onchange = function () {
         instrument.release = parseFloat(this.value);
+    };
+    document.getElementById('octave').onchange = function () {
+        octave = parseFloat(this.value);
     };
 };
