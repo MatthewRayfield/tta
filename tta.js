@@ -44,7 +44,7 @@ window.onload = function () {
 
         // Properties
         self.volume = 1;
-        self.type = 0;
+        self.type = 1;
         self.playing = false;
 
         // Volume envelope
@@ -79,6 +79,7 @@ window.onload = function () {
                 audioNode.frequency.value = frequency;
             }
             audioNode.connect(gainNode);
+            audioNode.noteOn(0);
             self.playing = true;
         };
 
@@ -97,6 +98,7 @@ window.onload = function () {
                 }
                 gainNode.gain.linearRampToValueAtTime(0, context.currentTime + releaseTime);
             }
+            //audioNode.noteOff(0);
             self.playing = false;
         };
     }
