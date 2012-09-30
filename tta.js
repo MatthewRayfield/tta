@@ -1,67 +1,53 @@
 window.onload = function () {
     var context = new webkitAudioContext();
     var instrument = new Instrument(context);
-    var stepsByKey = {
-        90: -9,
-        83: -8,
-        88: -7,
-        68: -6,
-        67: -5,
-        86: -4,
-        71: -3,
-        66: -2,
-        72: -1,
-        78: 0,
-        74: 1,
-        77: 2
-    };
-    var octave = 4;
 
     document.onkeydown = function (e) {
         var key = e.which;
-        var steps = stepsByKey[key];
-        var freq;
 
-        if (typeof steps !== 'undefined') {
-            steps = steps + ((octave-4)*12)
-            freq = Math.pow(2, steps/12)*440;
-            if (!instrument.playing) {
-                instrument.play(freq);
-            }
-        }
+        instrument.play();
     };
 
     document.onkeyup = function (e) {
-        instrument.stop();
+        var key = e.which;
     };
 
     function Instrument(context) {
         var self = this;
-        var t = 0;
-        var audioNode;
-        var gainNode;
-        var startTime;
 
         // Properties
         self.volume = 1;
-        self.type = 1;
-        self.playing = false;
+        self.type = 0;
+        self.octave = 4;
+        self.semitone = 0;
 
         // Volume envelope
         self.attack = .1;
-        self.decay = .2;
+        self.decay = .1;
         self.sustain = .1;
+        self.sustainDuration = .2;
         self.release = .5;
 
-        self.play = function (frequency) {
-            gainNode = context.createGainNode();
-            startTime = context.currentTime;
+        self.play = function () {
+            var audioNode;
+            var gainNode = context.createGainNode();
+
+            var playTime = self.attack + self.decay + self.sustainDuration + self.release;
+
+            // Yeah, this could be cleaner...
+            var frequency = Math.pow(2, ((((self.octave - 4) * 12) + (self.semitone - 9))/12)) * 440;
+
+            console.log(frequency);
+
             gainNode.gain.linearRampToValueAtTime(0, context.currentTime);
             gainNode.gain.linearRampToValueAtTime(self.volume, context.currentTime + self.attack);
             gainNode.gain.linearRampToValueAtTime(self.sustain, context.currentTime + self.attack + self.decay);
+            gainNode.gain.linearRampToValueAtTime(self.sustain, context.currentTime + self.attack + self.decay + self.sustainDuration);
+            gainNode.gain.linearRampToValueAtTime(0, context.currentTime + self.attack + self.decay + self.sustainDuration + self.release);
+
             gainNode.connect(context.destination);
 
-            if (!self.type) {
+            if (self.type > 4) {
                 audioNode = context.createJavaScriptNode(1024, 1, 1);
                 audioNode.onaudioprocess = function(e) {
                     var data = e.outputBuffer.getChannelData(0);
@@ -75,50 +61,23 @@ window.onload = function () {
             }
             else {
                 audioNode = context.createOscillator();
-                audioNode.type = self.type - 1;
+                audioNode.type = self.type;
                 audioNode.frequency.value = frequency;
+
+                audioNode.noteOn(0);
+                audioNode.noteOff(context.currentTime + playTime);
             }
+
             audioNode.connect(gainNode);
-            audioNode.noteOn(0);
-            self.playing = true;
-        };
 
-        self.stop = function () {
-            var releaseTime;
-            var playTime = context.currentTime - startTime;
-            var adTime = self.attack + self.decay;
-            var diff = adTime - playTime;
+            setTimeout(function () {
+                // Clean up
+                gainNode.disconnect();
+                gainNode = null;
+                audioNode.disconnect();
+                audioNode = null;
 
-            if (gainNode) {
-                if (diff > 0) {
-                    releaseTime = self.release + diff;
-                }
-                else {
-                    releaseTime = self.release;
-                }
-                gainNode.gain.linearRampToValueAtTime(0, context.currentTime + releaseTime);
-            }
-            //audioNode.noteOff(0);
-            self.playing = false;
+            }, 1000 * playTime);
         };
     }
-
-    document.getElementById('type').onchange = function () {
-        instrument.type = parseFloat(this.value);
-    };
-    document.getElementById('attack').onchange = function () {
-        instrument.attack = parseFloat(this.value);
-    };
-    document.getElementById('decay').onchange = function () {
-        instrument.decay = parseFloat(this.value);
-    };
-    document.getElementById('sustain').onchange = function () {
-        instrument.sustain = parseFloat(this.value);
-    };
-    document.getElementById('release').onchange = function () {
-        instrument.release = parseFloat(this.value);
-    };
-    document.getElementById('octave').onchange = function () {
-        octave = parseFloat(this.value);
-    };
 };
