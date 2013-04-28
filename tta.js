@@ -1,11 +1,49 @@
 window.onload = function () {
     var context = new webkitAudioContext();
     var instrument = new Instrument(context);
+    var keyMap = {
+        90: 0,
+        83: 1,
+        88: 2,
+        68: 3,
+        67: 4,
+        86: 5,
+        71: 6,
+        66: 7,
+        72: 8,
+        78: 9,
+        74: 10,
+        77: 11
+    };
+    var attackKnob  = new luk.Knob(document.getElementById('attack'), {'maximumValue': 1000, 'value': 0, 'sensitivity': 5}),
+        decayKnob   = new luk.Knob(document.getElementById('decay'), {'maximumValue': 1000, 'value': 0, 'sensitivity': 5}),
+        sustainKnob = new luk.Knob(document.getElementById('sustain'), {'maximumValue': 1000, 'value': 1000, 'sensitivity': 5}),
+        releaseKnob = new luk.Knob(document.getElementById('release'), {'maximumValue': 1000, 'value': 0, 'sensitivity': 5}),
+        waveKnob    = new luk.Knob(document.getElementById('wave'), {'maximumValue': 4, 'value': 2, 'sensitivity': .1});
+
+    function adjustInstrument() {
+        instrument.attack = attackKnob.value / 1000;
+        instrument.decay = decayKnob.value / 1000;
+        instrument.sustain = sustainKnob.value / 1000;
+        instrument.release = releaseKnob.value / 1000;
+        instrument.type = waveKnob.value;
+    }
+
+    adjustInstrument();
+
+    attackKnob.onchange = adjustInstrument;
+    decayKnob.onchange = adjustInstrument;
+    sustainKnob.onchange = adjustInstrument;
+    releaseKnob.onchange = adjustInstrument;
+    waveKnob.onchange = adjustInstrument;
 
     document.onkeydown = function (e) {
-        var key = e.which;
+        var key = e.which,
+            semitone = keyMap[key];
 
-        instrument.play();
+        if (semitone !== undefined) {
+            instrument.play(semitone);
+        }
     };
 
     document.onkeyup = function (e) {
@@ -19,7 +57,6 @@ window.onload = function () {
         self.volume = 1;
         self.type = 0;
         self.octave = 4;
-        self.semitone = 0;
 
         // Volume envelope
         self.attack = .1;
@@ -28,16 +65,24 @@ window.onload = function () {
         self.sustainDuration = .2;
         self.release = .5;
 
-        self.play = function () {
-            var audioNode;
-            var gainNode = context.createGainNode();
+        self.play = function (semitone) {
+            var audioNode,
+                gainNode,
+                playTime,
+                frequency;
 
-            var playTime = self.attack + self.decay + self.sustainDuration + self.release;
+            gainNode = context.createGainNode();
+
+            playTime = self.attack + self.decay + self.sustainDuration + self.release;
+
+            if (!semitone) {
+                semitone = 0;
+            }
 
             // Yeah, this could be cleaner...
-            var frequency = Math.pow(2, ((((self.octave - 4) * 12) + (self.semitone - 9))/12)) * 440;
+            frequency = Math.pow(2, ((((self.octave - 4) * 12) + (semitone - 9))/12)) * 440;
 
-            console.log(frequency);
+            //console.log(frequency);
 
             gainNode.gain.linearRampToValueAtTime(0, context.currentTime);
             gainNode.gain.linearRampToValueAtTime(self.volume, context.currentTime + self.attack);
@@ -47,7 +92,7 @@ window.onload = function () {
 
             gainNode.connect(context.destination);
 
-            if (self.type > 4) {
+            if (self.type > 3) {
                 audioNode = context.createJavaScriptNode(1024, 1, 1);
                 audioNode.onaudioprocess = function(e) {
                     var data = e.outputBuffer.getChannelData(0);
