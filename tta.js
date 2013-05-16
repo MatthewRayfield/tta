@@ -2,18 +2,18 @@ window.onload = function () {
     var context = new webkitAudioContext();
     var instrument = new Instrument(context);
     var keyMap = {
-        90: 0,
-        83: 1,
-        88: 2,
-        68: 3,
-        67: 4,
-        86: 5,
-        71: 6,
-        66: 7,
-        72: 8,
-        78: 9,
-        74: 10,
-        77: 11
+        'z': 0,
+        's': 1,
+        'x': 2,
+        'd': 3,
+        'c': 4,
+        'v': 5,
+        'g': 6,
+        'b': 7,
+        'h': 8,
+        'n': 9,
+        'j': 10,
+        'm': 11
     };
     var attackKnob  = new luk.Knob(document.getElementById('attack'), {'maximumValue': 1000, 'value': 0, 'sensitivity': 5}),
         decayKnob   = new luk.Knob(document.getElementById('decay'), {'maximumValue': 1000, 'value': 0, 'sensitivity': 5}),
@@ -21,12 +21,31 @@ window.onload = function () {
         releaseKnob = new luk.Knob(document.getElementById('release'), {'maximumValue': 1000, 'value': 0, 'sensitivity': 5}),
         waveKnob    = new luk.Knob(document.getElementById('wave'), {'maximumValue': 4, 'value': 2, 'sensitivity': .1});
 
+    [].forEach.apply(document.getElementsByClassName('key'), [function (keyElement) {
+        keyElement.addEventListener('click', keyClick);
+        keyElement.addEventListener('mousedown', function (event) {
+            event.preventDefault();
+        });
+    }]);
+
+    function keyClick() {
+        playKey(this.id);
+    }
+
     function adjustInstrument() {
         instrument.attack = attackKnob.value / 1000;
         instrument.decay = decayKnob.value / 1000;
         instrument.sustain = sustainKnob.value / 1000;
         instrument.release = releaseKnob.value / 1000;
         instrument.type = waveKnob.value;
+    }
+
+    function playKey(key) {
+        var semitone = keyMap[key];
+
+        if (semitone !== undefined) {
+            instrument.play(semitone);
+        }
     }
 
     adjustInstrument();
@@ -38,16 +57,9 @@ window.onload = function () {
     waveKnob.onchange = adjustInstrument;
 
     document.onkeydown = function (e) {
-        var key = e.which,
-            semitone = keyMap[key];
+        var key = String.fromCharCode(e.which).toLowerCase();
 
-        if (semitone !== undefined) {
-            instrument.play(semitone);
-        }
-    };
-
-    document.onkeyup = function (e) {
-        var key = e.which;
+        playKey(key);
     };
 
     function Instrument(context) {
