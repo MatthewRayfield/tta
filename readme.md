@@ -33,3 +33,15 @@ If you'd like to run it off your own computer or web-server just do the followin
 2. Clone the [luk repo](https://github.com/MatthewRayfield/luk).
 3. Copy, "luk.js" and "luk.css" into your tta folder.
 4. Access "tta.html".
+
+### What's next?
+I'm not sure. But I do have some ideas:
+
+- Multi-octave support.
+- Firefox support.
+- Mouse-based theremin-like controls for things.
+- Sequencer.
+- Effects.
+- Recording.
+- Touch support (not sure what the state of mobile web audio is).
+- More doodads!
