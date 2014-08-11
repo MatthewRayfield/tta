@@ -36,7 +36,7 @@ function Instrument(context) {
             playTime,
             frequency;
 
-        gainNode = context.createGainNode();
+        gainNode = context.createGain();
 
         playTime = self.attack + self.decay + self.sustainDuration + self.release;
 
@@ -59,7 +59,7 @@ function Instrument(context) {
         gainNode.connect(context.destination);
 
         if (self.type > 3) {
-            audioNode = context.createJavaScriptNode(1024, 1, 1);
+            audioNode = context.createScriptProcessor(1024, 1, 1);
             audioNode.onaudioprocess = function(e) {
                 var data = e.outputBuffer.getChannelData(0);
                 var i;
@@ -72,7 +72,7 @@ function Instrument(context) {
         }
         else {
             audioNode = context.createOscillator();
-            audioNode.type = self.type;
+            audioNode.type = ['sine', 'square', 'sawtooth', 'triangle'][self.type];
             audioNode.frequency.value = frequency;
 
             audioNode.noteOn(0);
