@@ -75,8 +75,8 @@ function Instrument(context) {
             audioNode.type = ['sine', 'square', 'sawtooth', 'triangle'][self.type];
             audioNode.frequency.value = frequency;
 
-            audioNode.noteOn(0);
-            audioNode.noteOff(context.currentTime + playTime);
+            audioNode.start(0);
+            audioNode.stop(context.currentTime + playTime);
         }
 
         audioNode.connect(gainNode);
